@@ -42,8 +42,12 @@ def _(RES, json, mo, os, pd):
         "analysis have finished) from this folder."), kind="warn"))
     S = json.load(open(_summary))
     BASE, GUIDED, ADAPT = S["base"], S["guided"], S.get("adaptive")  # ADAPT: confidence-aware run, if analysed
-    maps = {m["emdb"]: m for m in S["maps"]}
+    # the 13-map dataset; other maps that may be on the volume are left out of every table and figure
+    MAPS13 = {"EMD-1495", "EMD-6339", "EMD-1777", "EMD-25708", "EMD-40983", "EMD-1149", "EMD-2281", "EMD-5755",
+              "EMD-7013", "EMD-15486", "EMD-8235", "EMD-2355", "EMD-2712"}
+    maps = {m["emdb"]: m for m in S["maps"] if m["emdb"] in MAPS13}
     scores = pd.read_csv(os.path.join(RES, "scores.csv"))
+    scores = scores[scores.emdb.isin(MAPS13)]
     return ADAPT, BASE, GUIDED, maps, scores
 
 
