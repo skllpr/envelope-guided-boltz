@@ -1,0 +1,6 @@
+modal
+marimo
+numpy
+pandas
+matplotlib
+py3Dmol
