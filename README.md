@@ -42,6 +42,11 @@ Each finished run is checkpointed on the volume, so rerunning `main` resumes whe
 The executed notebook with all tables and figures is in `results/`: `showcase.html` (open in a browser; includes
 the interactive 3D view) and `showcase.ipynb` (renders on GitHub).
 
+`figures/` holds the final figures. `figure1_abc.png` is Figure 1: (a) every map, plain vs confidence-aware
+guidance (`fig1a_tm_all_maps.png`); (b) EMD-1149 and (c) EMD-2712, plain vs confidence-aware top model over the
+deposited structure (`fig1b_emd1149.png`, `fig1c_emd2712_confidence_aware.png`). The other files are every figure
+`showcase.py` exports (overview, plus structures / envelope / samples for each map).
+
 Mean TM-score 0.485 plain → 0.523 confidence-aware (+0.04). Largest gains: EMD-1149 (12-chain cage)
 0.43 → 0.75 and EMD-2712 0.53 → 0.81. Guidance is switched off on the maps plain Boltz-2 is confident on
 (e.g. EMD-6339, which always-on guidance had pushed from 0.98 to 0.57).
