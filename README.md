@@ -47,6 +47,11 @@ guidance (`fig1a_tm_all_maps.png`); (b) EMD-1149 and (c) EMD-2712, plain vs conf
 deposited structure (`fig1b_emd1149.png`, `fig1c_emd2712_confidence_aware.png`). The other files are every figure
 `showcase.py` exports (overview, plus structures / envelope / samples for each map).
 
+**Official figures** for the write-up are in `figures/official/`: `figure1.png` (the a/b/c figure above),
+`figure2.png` (method), `figure3.png` (confidence-aware guidance and ipTM per map) and `figure4.png` (EMD-1149
+placed in the negative-stain envelope). Figures 2-4 carry their captions; `make_figures.py` rebuilds them
+(edit the caption text in `FIGURES` and rerun).
+
 Mean TM-score 0.485 plain → 0.523 confidence-aware (+0.04). Largest gains: EMD-1149 (12-chain cage)
 0.43 → 0.75 and EMD-2712 0.53 → 0.81. Guidance is switched off on the maps plain Boltz-2 is confident on
 (e.g. EMD-6339, which always-on guidance had pushed from 0.98 to 0.57).
