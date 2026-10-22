@@ -39,6 +39,9 @@ scores and analyses everything. `fetch` downloads the results into `modal_result
 Each finished run is checkpointed on the volume, so rerunning `main` resumes where it stopped.
 
 ## Results (13 maps, top-confidence model, TM-score vs deposited)
+The executed notebook with all tables and figures is in `results/`: `showcase.html` (open in a browser; includes
+the interactive 3D view) and `showcase.ipynb` (renders on GitHub).
+
 Mean TM-score 0.485 plain → 0.523 confidence-aware (+0.04). Largest gains: EMD-1149 (12-chain cage)
 0.43 → 0.75 and EMD-2712 0.53 → 0.81. Guidance is switched off on the maps plain Boltz-2 is confident on
 (e.g. EMD-6339, which always-on guidance had pushed from 0.98 to 0.57).
