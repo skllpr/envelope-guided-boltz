@@ -1,3 +1,12 @@
 modal_results/
 __pycache__/
 *.pyc
+# Delta
+maps_unzipped/
+/deposited
+external/
+logs/
+envguide/msa/
+analysis/
+delta/oom_targets.txt
+delta/failed_targets.txt

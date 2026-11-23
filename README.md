@@ -38,6 +38,10 @@ marimo edit showcase.py
 scores and analyses everything. `fetch` downloads the results into `modal_results/`, which `showcase.py` reads.
 Each finished run is checkpointed on the volume, so rerunning `main` resumes where it stopped.
 
+## Running on NCSA Delta (ACCESS)
+Slurm version of the same pipeline (one A40 per map, H200 reruns for out-of-memory maps, CPU analysis), plus
+the script that picks the next benchmark maps: see [`delta/README.md`](delta/README.md).
+
 ## Results (13 maps, top-confidence model, TM-score vs deposited)
 The executed notebook with all tables and figures is in `results/`: `showcase.html` (open in a browser; includes
 the interactive 3D view) and `showcase.ipynb` (renders on GitHub).
