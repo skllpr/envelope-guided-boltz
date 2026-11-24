@@ -7,9 +7,10 @@ of memory on an A40 are rerun on an H200), analysis on a CPU node.
 ## 1. On Delta, once: install (login node, no allocation)
 ```bash
 ssh <user>@login.delta.ncsa.illinois.edu
-git clone -b delta-slurm https://github.com/skllpr/envelope-guided-boltz.git && cd envelope-guided-boltz
 accounts                      # shows <project>-delta-gpu / <project>-delta-cpu
-nano delta/config.sh          # set DELTA_PROJECT (and ENVGUIDE_DATA if /projects/<project>/<user> is not right)
+mkdir -p /work/hdd/<project>/$USER && cd /work/hdd/<project>/$USER
+git clone -b delta-slurm https://github.com/skllpr/envelope-guided-boltz.git && cd envelope-guided-boltz
+nano delta/config.sh          # set DELTA_PROJECT
 bash delta/setup_env.sh       # Miniforge + Boltz-2 2.2.1 + US-align + weights (~15-30 min)
 ```
 
@@ -45,8 +46,13 @@ jobcharge -a <project>-delta-gpu -d 7    # SU actually charged; divide by maps f
 Rerunning `submit.sh` or `rerun_oom.sh` is safe: finished modes of each map are skipped.
 
 ## Where things go
-- `$ENVGUIDE_DATA/boltz_cache/envguide_runs/<mode>/<EMD>/`: Boltz outputs and logs (as on Modal)
-- `$ENVGUIDE_DATA/boltz_cache/envguide_runs/status/<EMD>.json`: per-map status, GPU and run time
+Following Delta's data-management guide: job I/O on `/work/hdd`, software on `/projects`, nothing in `$HOME`.
+- `/work/hdd/<project>/<user>/envelope-guided-boltz/`: this repo (jobs write scores, figures, logs, unzipped maps into it)
+- `/work/hdd/<project>/<user>/envguide/boltz_cache/`: Boltz weights and every run
+- `/projects/<project>/<user>/miniforge3/`: the conda install and the `envguide` environment
+
+- `.../envguide/boltz_cache/envguide_runs/<mode>/<EMD>/`: Boltz outputs and logs (as on Modal)
+- `.../envguide/boltz_cache/envguide_runs/status/<EMD>.json`: per-map status, GPU and run time
 - `envguide/scores.csv`, `envguide/figures/`, `analysis/`: scoring, figures, showcase data
 - `logs/`: Slurm output
 

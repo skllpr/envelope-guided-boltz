@@ -1,18 +1,26 @@
 # shellcheck shell=bash
-# Settings for running on NCSA Delta. Edit the two lines marked EDIT, then every delta/ script sources this file.
+# Settings for running on NCSA Delta. Edit the line marked EDIT; every delta/ script sources this file.
 
 # EDIT: your Delta project code: the part before "-delta-gpu" in the `accounts` output (e.g. bbka).
 export DELTA_PROJECT="${DELTA_PROJECT:-CHANGE_ME}"
-# EDIT: a folder with room for the Boltz weights (~6 GB) and the runs (a few GB per 100 maps).
-#       /projects/<project>/<user> is the usual choice; your home directory is too small.
-export ENVGUIDE_DATA="${ENVGUIDE_DATA:-/projects/${DELTA_PROJECT}/${USER:-$(id -un)}/envguide}"
+DELTA_USER="${USER:-$(id -un)}"
+# Where things go, per the Delta data-management guide:
+#   /work/hdd/<project>/<user>   job I/O (scratch volume, 1 TB, not purged): this repo, the Boltz weights and runs
+#   /projects/<project>/<user>   software (500 GB): the conda install
+#   $HOME (/u/<user>, 100 GB)    nothing from this pipeline; it is not meant for job I/O
+export ENVGUIDE_DATA="${ENVGUIDE_DATA:-/work/hdd/${DELTA_PROJECT}/${DELTA_USER}/envguide}"
+export CONDA_DIR="${CONDA_DIR:-/projects/${DELTA_PROJECT}/${DELTA_USER}/miniforge3}"
 
 export GPU_ACCOUNT="${DELTA_PROJECT}-delta-gpu"
 export CPU_ACCOUNT="${DELTA_PROJECT}-delta-cpu"
-export CONDA_DIR="${CONDA_DIR:-${ENVGUIDE_DATA}/miniforge3}"
 export ENV_NAME="envguide"
 export BOLTZ_CACHE="${BOLTZ_CACHE:-${ENVGUIDE_DATA}/boltz_cache}"   # weights; runs go to $BOLTZ_CACHE/envguide_runs (run_boltz.py)
 export MPLBACKEND=Agg
+# Keep pip/torch/triton caches out of $HOME (torch alone is several GB)
+export PIP_CACHE_DIR="${ENVGUIDE_DATA}/cache/pip"
+export XDG_CACHE_HOME="${ENVGUIDE_DATA}/cache"
+export TRITON_CACHE_DIR="${ENVGUIDE_DATA}/cache/triton"
+export TORCH_HOME="${ENVGUIDE_DATA}/cache/torch"
 
 # Run settings (the pilot used these)
 export SAMPLES="${SAMPLES:-5}"
@@ -32,4 +40,12 @@ check_config() {
         echo "Set DELTA_PROJECT in delta/config.sh first (run 'accounts' on Delta to see it)." >&2
         exit 1
     fi
+    local repo
+    repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+    case "${repo}" in
+        /u/*|"${HOME}"/*)
+            echo "This repo is under your home directory; jobs write into it (scores, figures, logs, unzipped maps)." >&2
+            echo "Delta's guide says home is not for job I/O. Clone it under /work/hdd/${DELTA_PROJECT}/${DELTA_USER}/ instead." >&2
+            exit 1 ;;
+    esac
 }
