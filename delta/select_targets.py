@@ -4,6 +4,8 @@
   python delta/select_targets.py --n 87                                   # pick, download, write inputs
   python delta/select_targets.py --n 87 --local-maps /Volumes/KINGSTON/EMDB_negative_stain_maps
   python delta/select_targets.py --n 87 --dry-run                         # just list what would be picked
+  python delta/select_targets.py --n 87 --offline --emdb-csv <dir>/manifest.csv --local-models <dir>/deposited \
+      --local-maps <dir>/maps                                             # no network: only what is on disk
 
 Selection (same rules as the dataset manifest, then what Boltz-2 can run on one 48 GB GPU):
   1. EMDB search `staining_category:negative`, no tomography, single-particle only at resolution >= 10 A.
@@ -60,10 +62,14 @@ def get(url, tries=4):
         time.sleep(5 * (i + 1))
 
 
-def emdb_candidates():
+def emdb_candidates(emdb_csv=None):
     """EMDB negative-stain entries with a fitted model, after the manifest's method/resolution rules."""
-    rows = list(csv.DictReader(io.StringIO(get(EMDB_SEARCH).decode())))
-    print(f"EMDB staining_category:negative -> {len(rows)} entries", flush=True)
+    if emdb_csv:  # e.g. the dataset manifest.csv (same columns as the search below)
+        rows = list(csv.DictReader(open(emdb_csv)))
+        print(f"{emdb_csv} -> {len(rows)} entries", flush=True)
+    else:
+        rows = list(csv.DictReader(io.StringIO(get(EMDB_SEARCH).decode())))
+        print(f"EMDB staining_category:negative -> {len(rows)} entries", flush=True)
     out = []
     for r in rows:
         method = (r.get("structure_determination_method") or "").lower()
@@ -139,7 +145,7 @@ def target_row(emd, pdb, ents, res, year):
 
 def find_local_map(local_dir, emd):
     n = emd.split("-")[1]
-    for pat in (f"emd_{n}.map.gz", f"EMD-{n}.map.gz", f"emd_{n}.map", f"EMD-{n}.map", f"*{n}*.map*"):
+    for pat in (f"emd_{n}.map.gz", f"EMD-{n}.map.gz", f"emd_{n}.map", f"EMD-{n}.map"):
         hits = [h for h in glob.glob(os.path.join(local_dir, "**", pat), recursive=True) if not h.endswith(".part")]
         if hits:
             return hits[0]
@@ -171,6 +177,10 @@ def main():
     ap.add_argument("--n", type=int, default=87, help="new maps to add")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--local-maps", default=None, help="folder with already-downloaded EMDB maps (searched recursively)")
+    ap.add_argument("--emdb-csv", default=None, help="EMDB metadata CSV to use instead of querying EMDB "
+                    "(e.g. the dataset manifest.csv)")
+    ap.add_argument("--local-models", default=None, help="folder with <PDB>-assembly1.cif files to use before RCSB")
+    ap.add_argument("--offline", action="store_true", help="never download; skip maps/models not found locally")
     ap.add_argument("--dry-run", action="store_true", help="list the picks, write nothing but the log")
     a = ap.parse_args()
 
@@ -182,7 +192,7 @@ def main():
         y = open(os.path.join(INPUTS, f"{r['emdb']}.yaml")).read()
         seen_seqs.add(frozenset(re.findall(r"sequence:\s*(\S+)", y)))
 
-    cands = emdb_candidates()
+    cands = emdb_candidates(a.emdb_csv)
     random.Random(a.seed).shuffle(cands)  # random draw; stable for a given seed
     log, picked = [], []
     for c in cands:
@@ -199,11 +209,18 @@ def main():
             if pdb in seen_pdb:
                 reasons.append(f"{pdb}: model already used by another map")
                 continue
-            raw = get(RCSB_ASSEMBLY.format(pdb=pdb))
-            if raw is None:
-                reasons.append(f"{pdb}: no assembly 1 at RCSB")
+            local = os.path.join(a.local_models, f"{pdb}-assembly1.cif") if a.local_models else ""
+            if local and os.path.exists(local):
+                text = open(local).read()
+            elif a.offline:
+                reasons.append(f"{pdb}: model not in --local-models (offline)")
                 continue
-            text = raw.decode()
+            else:
+                raw = get(RCSB_ASSEMBLY.format(pdb=pdb))
+                if raw is None:
+                    reasons.append(f"{pdb}: no assembly 1 at RCSB")
+                    continue
+                text = raw.decode()
             ents, why = describe_assembly(text)
             if ents is None:
                 reasons.append(f"{pdb}: {why}")
@@ -219,6 +236,9 @@ def main():
             if key in seen_seqs:
                 reasons.append(f"{pdb}: same chain sequences as a map already picked")
                 continue
+            if a.offline and not (a.local_maps and find_local_map(a.local_maps, c["emdb"])):
+                reasons.append("map not in --local-maps (offline)")
+                break
             if not a.dry_run:
                 ok = save_map(c["emdb"], a.local_maps)
                 if not ok:
