@@ -10,3 +10,5 @@ envguide/msa/
 analysis/
 delta/oom_targets.txt
 delta/failed_targets.txt
+delta/targets_a40.txt
+delta/targets_h200.txt

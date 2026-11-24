@@ -11,7 +11,7 @@ Selection (same rules as the dataset manifest, then what Boltz-2 can run on one 
   1. EMDB search `staining_category:negative`, no tomography, single-particle only at resolution >= 10 A.
   2. Has a fitted PDB model (the answer key), and that model's RCSB assembly 1 downloads.
   3. Assembly 1 is protein only (no DNA/RNA), <= MAX_ENTITIES distinct chains, <= MAX_CHAINS chains in total,
-     MIN_TOKENS..MAX_TOKENS residues in total (the pilot's largest map was 2,408).
+     MIN_TOKENS..MAX_TOKENS residues in total (--max-tokens; the pilot's largest map was 2,408).
   4. Not one of the 13 pilot maps, and not a duplicate: one map per PDB entry and per set of chain sequences.
   If more than --n maps pass, a seeded random draw picks --n of them (stable across reruns).
 
@@ -37,7 +37,7 @@ EMDB_SEARCH = ("https://www.ebi.ac.uk/emdb/api/search/staining_category:negative
 EMDB_MAP = "https://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-{n}/map/emd_{n}.map.gz"
 RCSB_ASSEMBLY = "https://files.rcsb.org/download/{pdb}-assembly1.cif"
 
-MIN_TOKENS, MAX_TOKENS = 100, 2500
+MIN_TOKENS, MAX_TOKENS = 100, 4000  # maps over H200_MIN_TOKENS (config.sh) run on an H200
 MAX_CHAINS, MAX_ENTITIES = 20, 10
 DA_PER_RESIDUE = 110  # mass_da = residues x 110, as in the pilot targets.csv
 FIELDS = ["emdb", "pdb", "tokens", "chains", "entities", "mass_da", "resolution", "year", "homo_oligomer",
@@ -174,8 +174,9 @@ def save_map(emd, local_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--n", type=int, default=87, help="new maps to add")
+    ap.add_argument("--n", type=int, default=64, help="new maps to add (at most; fewer if fewer pass)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-tokens", type=int, default=MAX_TOKENS, help="max residues in assembly 1")
     ap.add_argument("--local-maps", default=None, help="folder with already-downloaded EMDB maps (searched recursively)")
     ap.add_argument("--emdb-csv", default=None, help="EMDB metadata CSV to use instead of querying EMDB "
                     "(e.g. the dataset manifest.csv)")
@@ -226,8 +227,8 @@ def main():
                 reasons.append(f"{pdb}: {why}")
                 continue
             t = target_row(c["emdb"], pdb, ents, c["resolution"], c["year"])
-            if not MIN_TOKENS <= t["tokens"] <= MAX_TOKENS:
-                reasons.append(f"{pdb}: {t['tokens']} residues (limit {MIN_TOKENS}-{MAX_TOKENS})")
+            if not MIN_TOKENS <= t["tokens"] <= a.max_tokens:
+                reasons.append(f"{pdb}: {t['tokens']} residues (limit {MIN_TOKENS}-{a.max_tokens})")
                 continue
             if t["chains"] > MAX_CHAINS or len(ents) > MAX_ENTITIES:
                 reasons.append(f"{pdb}: {t['chains']} chains / {len(ents)} distinct")

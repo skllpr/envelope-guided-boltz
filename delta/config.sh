@@ -19,6 +19,7 @@ export SAMPLES="${SAMPLES:-5}"
 export STEPS="${STEPS:-100}"
 export SCALE="${SCALE:-1.0}"
 export MAX_PARALLEL="${MAX_PARALLEL:-25}"   # array tasks running at once
+export H200_MIN_TOKENS="${H200_MIN_TOKENS:-2500}"   # bigger maps skip the A40s (48 GB) and run on H200s
 
 activate_env() {
     # shellcheck disable=SC1091

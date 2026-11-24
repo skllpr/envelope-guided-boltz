@@ -1,6 +1,6 @@
 #!/bin/bash
-# Submit every map in delta/targets.txt (or a list file given as $1) to the A40 partition, one GPU per map,
-# plus a CPU analysis job that starts when the whole array has finished.
+# Submit every map in delta/targets.txt (or a list file given as $1), one GPU per map: A40s for maps up to
+# H200_MIN_TOKENS residues, H200s above that; plus a CPU analysis job that starts when all of them have finished.
 #   bash delta/submit.sh                 # all targets
 #   bash delta/submit.sh my_list.txt     # a subset (one EMD id per line)
 #   TEST=1 bash delta/submit.sh          # first map only, 1 sample, 20 steps: checks the setup for ~0.1 SU
@@ -25,15 +25,32 @@ if [ "${TEST:-0}" = "1" ]; then
     echo "TEST run: $(head -1 "${LIST}") only, 1 sample, 20 steps -> ${TEST_CACHE}/envguide_runs"
 fi
 
-# A40 node = 4 GPUs, 64 cores, ~250 GB: asking for <= 1/4 of the cores and memory keeps the charge at 1 GPU.
-# gpuA40x4 is charged at 0.5 SU per GPU-hour (A100 = 1.0).
-JOB=$(sbatch --parsable --export=ALL,TARGET_LIST="${LIST}" \
-    --account="${GPU_ACCOUNT}" --partition=gpuA40x4 --cpus-per-task=16 --mem=60g --time="${TIME}" \
-    --array="1-${N}%${MAX_PARALLEL}" delta/run_map.sbatch)
-echo "GPU array ${JOB}: ${N} maps on gpuA40x4"
-if [ "${TEST:-0}" != "1" ]; then
-    AJOB=$(sbatch --parsable --dependency=afterany:"${JOB}" --account="${CPU_ACCOUNT}" delta/analyze.sbatch)
-    echo "analysis ${AJOB} runs after the array finishes"
+# Split by size: maps over H200_MIN_TOKENS residues would run out of memory on a 48 GB A40, so they go straight
+# to an H200 (3 SU per GPU-hour) instead of failing on an A40 (0.5 SU per GPU-hour) first.
+python3 "${REPO}/delta/split_targets.py" "${LIST}" "${H200_MIN_TOKENS}" "${N}"
+
+DEPS=""
+if [ -s delta/targets_a40.txt ]; then
+    NA=$(grep -c . delta/targets_a40.txt)
+    # A40 node = 4 GPUs, 64 cores, ~250 GB: <= 1/4 of the cores and memory keeps the charge at 1 GPU.
+    J=$(sbatch --parsable --export=ALL,TARGET_LIST=delta/targets_a40.txt \
+        --account="${GPU_ACCOUNT}" --partition=gpuA40x4 --cpus-per-task=16 --mem=60g --time="${TIME}" \
+        --array="1-${NA}%${MAX_PARALLEL}" delta/run_map.sbatch)
+    echo "A40 array ${J}: ${NA} maps (<= ${H200_MIN_TOKENS} residues) on gpuA40x4"
+    DEPS="${J}"
+fi
+if [ -s delta/targets_h200.txt ]; then
+    NH=$(grep -c . delta/targets_h200.txt)
+    # H200 node = 8 GPUs, ~96 cores, ~2 TB: 12 cores + 200 GB stays within one GPU's share.
+    J=$(sbatch --parsable --export=ALL,TARGET_LIST=delta/targets_h200.txt \
+        --account="${GPU_ACCOUNT}" --partition=gpuH200x8 --cpus-per-task=12 --mem=200g --time="${TIME}" \
+        --array="1-${NH}%8" delta/run_map.sbatch)
+    echo "H200 array ${J}: ${NH} maps (> ${H200_MIN_TOKENS} residues) on gpuH200x8"
+    DEPS="${DEPS:+${DEPS}:}${J}"
+fi
+if [ "${TEST:-0}" != "1" ] && [ -n "${DEPS}" ]; then
+    AJOB=$(sbatch --parsable --dependency=afterany:"${DEPS}" --account="${CPU_ACCOUNT}" delta/analyze.sbatch)
+    echo "analysis ${AJOB} runs after the GPU jobs finish"
 fi
 echo "watch: squeue -u $(id -un)    logs: logs/    status: \$BOLTZ_CACHE/envguide_runs/status/"
-echo "then:  bash delta/rerun_oom.sh   (maps that ran out of GPU memory -> H200)"
+echo "then:  bash delta/rerun_oom.sh   (maps that still ran out of memory on an A40 -> H200)"

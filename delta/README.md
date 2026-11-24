@@ -1,36 +1,34 @@
 # Running on NCSA Delta (ACCESS)
 
 The same pipeline as `modal_pilot.py` (plain, envelope-guided and confidence-aware Boltz-2 per map, then scoring
-and analysis), run as Slurm jobs: one A40 per map, out-of-memory maps rerun on an H200, analysis on a CPU node.
-
-## 0. On the Mac: pick the next 87 maps (needs EMDB + RCSB, no allocation)
-```bash
-pip install gemmi
-python delta/select_targets.py --n 87 --dry-run                    # see what would be picked
-python delta/select_targets.py --n 87 --local-maps /Volumes/KINGSTON/EMDB_negative_stain_maps
-git add data envguide/inputs envguide/targets.csv delta/targets.txt delta/selection_log.csv
-git commit -m "Add Delta benchmark targets" && git push
-```
-Rules: EMDB negative stain with a fitted PDB model; protein only; 100-2,500 residues, <= 20 chains in assembly 1;
-one map per model and per set of chain sequences; the 13 pilot maps are kept. If fewer than 87 pass, the log
-(`delta/selection_log.csv`) says why each map was dropped. Maps are copied from the Kingston drive when found
-there, otherwise downloaded.
+and analysis), run as Slurm jobs: one GPU per map (A40 up to 2,500 residues, H200 above; maps that still run out
+of memory on an A40 are rerun on an H200), analysis on a CPU node.
 
 ## 1. On Delta, once: install (login node, no allocation)
 ```bash
 ssh <user>@login.delta.ncsa.illinois.edu
-git clone https://github.com/skllpr/envelope-guided-boltz.git && cd envelope-guided-boltz
+git clone -b delta-slurm https://github.com/skllpr/envelope-guided-boltz.git && cd envelope-guided-boltz
 accounts                      # shows <project>-delta-gpu / <project>-delta-cpu
 nano delta/config.sh          # set DELTA_PROJECT (and ENVGUIDE_DATA if /projects/<project>/<user> is not right)
 bash delta/setup_env.sh       # Miniforge + Boltz-2 2.2.1 + US-align + weights (~15-30 min)
 ```
 
-## 2. MSAs (login node, no allocation)
+## 2. Pick the benchmark maps and fetch MSAs (login node, no allocation)
 ```bash
 source delta/config.sh && activate_env
-python delta/fetch_msas.py    # ColabFold server, one map at a time; rerun until it reports all maps ready
+python delta/select_targets.py --dry-run      # what would be picked (up to 64 new + the 13 pilot maps)
+python delta/select_targets.py                # downloads maps + models from EMDB/RCSB, writes inputs
+bash delta/prepare_inputs.sh                  # unzip maps, link models
+python delta/fetch_msas.py                    # ColabFold server, one map at a time; rerun until all ready
 ```
-Run it inside `tmux` so it survives a dropped connection. Maps that still lack an MSA fetch it inside the GPU job.
+Selection rules: EMDB negative stain with a fitted PDB model; protein only; 100-4,000 residues and <= 20 chains in
+assembly 1; one map per model and per set of chain sequences. About 77 maps pass in total (only 141 negative-stain
+maps have a fitted model at all). `delta/selection_log.csv` says why each map was dropped. Maps over
+2,500 residues (`H200_MIN_TOKENS`) run on H200s. Run the MSA step inside `tmux` so it survives a dropped
+connection; maps still lacking an MSA fetch it inside the GPU job.
+
+Without network (e.g. a sandbox), the script can work from the dataset folder on disk instead:
+`--offline --emdb-csv <dir>/manifest.csv --local-models <dir>/deposited --local-maps <dir>/maps`.
 
 ## 3. Check the setup on one map (~0.1 SU)
 ```bash
@@ -40,7 +38,7 @@ squeue -u $USER; tail -f logs/envguide_*.out
 
 ## 4. Full run
 ```bash
-bash delta/submit.sh          # every map in delta/targets.txt on gpuA40x4 (25 at a time) + analysis job after
+bash delta/submit.sh          # every map: A40s (25 at a time) / H200s (8 at a time) by size, + analysis job after
 bash delta/rerun_oom.sh       # when the array is done: out-of-memory maps -> gpuH200x8, then re-analysis
 jobcharge -a <project>-delta-gpu -d 7    # SU actually charged; divide by maps for the cost per map
 ```
@@ -54,16 +52,17 @@ Rerunning `submit.sh` or `rerun_oom.sh` is safe: finished modes of each map are 
 
 ## Cost (estimate; replace with the `jobcharge` numbers after the first batch)
 gpuA40x4 is charged 0.5 SU per GPU-hour, gpuH200x8 3 SU. At ~1.5 A40-hours per map (3 modes x 5 samples x
-100 steps), 100 maps is ~75 SU, plus ~45 SU if ~15 maps need an H200. Jobs ask for 16 cores / 60 GB on an A40
+100 steps), ~64 maps <= 2,500 residues is ~50 SU; ~13 maps of 2,500-4,000 residues on H200s at maybe ~1.5 hours each
+is ~60 SU; ~110 SU in all, before setup and reruns. Jobs ask for 16 cores / 60 GB on an A40
 (12 / 200 GB on an H200), within one GPU's share of the node, so each is charged as one GPU.
 
 ## Files
 | file | runs on | what |
 |---|---|---|
-| `select_targets.py` | Mac | picks maps, downloads maps + models, writes inputs and `targets.txt` |
+| `select_targets.py` | login node | picks maps, downloads maps + models, writes inputs and `targets.txt` |
 | `config.sh` | - | project, paths, run settings (samples, steps, scale, parallel tasks) |
 | `setup_env.sh`, `prepare_inputs.sh` | login node | install; unzip maps and link models (rerun after adding maps) |
 | `fetch_msas.py` | login node | MSAs from the ColabFold server into `envguide/msa/` |
-| `submit.sh`, `run_map.sbatch`, `run_map.py` | GPU | one map per array task (port of `modal_pilot._run_map`) |
+| `submit.sh`, `split_targets.py`, `run_map.sbatch`, `run_map.py` | GPU | one map per array task, A40 or H200 by size (port of `modal_pilot._run_map`) |
 | `rerun_oom.sh` | GPU | H200 reruns (and `FAILED=1` A40 retries) |
 | `analyze.sbatch` | CPU | `score.py`, `figures.py`, `pilot_analysis.py` |
