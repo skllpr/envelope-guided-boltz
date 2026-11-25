@@ -16,11 +16,11 @@ bash delta/setup_env.sh       # conda env (Delta's miniforge3-python) + Boltz-2 
 
 ## 2. Pick the benchmark maps and fetch MSAs (login node, no allocation)
 ```bash
-source delta/config.sh && activate_env
-python delta/select_targets.py --dry-run      # what would be picked (up to 64 new + the 13 pilot maps)
-python delta/select_targets.py                # downloads maps + models from EMDB/RCSB, writes inputs
+source delta/config.sh && activate_env    # interactive shell only; jobs use the env's python directly
+"$ENV_PY" delta/select_targets.py --dry-run      # what would be picked (up to 64 new + the 13 pilot maps)
+"$ENV_PY" delta/select_targets.py                # downloads maps + models from EMDB/RCSB, writes inputs
 bash delta/prepare_inputs.sh                  # unzip maps, link models
-python delta/fetch_msas.py                    # ColabFold server, one map at a time; rerun until all ready
+"$ENV_PY" delta/fetch_msas.py                    # ColabFold server, one map at a time; rerun until all ready
 ```
 Selection rules: EMDB negative stain with a fitted PDB model; protein only; 100-4,000 residues and <= 20 chains in
 assembly 1; one map per model and per set of chain sequences. About 77 maps pass in total (only 141 negative-stain

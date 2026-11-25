@@ -15,6 +15,8 @@ export CONDA_MODULE="${CONDA_MODULE:-miniforge3-python}"
 export CONDA_DIR="${CONDA_DIR:-}"
 export ENV_PREFIX="${ENV_PREFIX:-/projects/${DELTA_PROJECT}/${DELTA_USER}/conda/envs/envguide}"
 export CONDA_PKGS_DIRS="${CONDA_PKGS_DIRS:-/projects/${DELTA_PROJECT}/${DELTA_USER}/conda/pkgs}"
+export ENV_PY="${ENV_PREFIX}/bin/python"   # scripts call this directly, so jobs never depend on `conda activate`
+export PYTHONNOUSERSITE=1                  # ignore anything pip put in ~/.local
 
 export GPU_ACCOUNT="${DELTA_PROJECT}-delta-gpu"
 export CPU_ACCOUNT="${DELTA_PROJECT}-delta-cpu"
@@ -60,9 +62,17 @@ _load_conda() {
 
 load_conda() { _with_nounset_off _load_conda; }
 
-activate_env() {
+activate_env() {  # for interactive use; scripts use ${ENV_PY}
     load_conda || return 1
     _with_nounset_off conda activate "${ENV_PREFIX}"
+}
+
+use_env() {  # in jobs: put the env first on PATH and stop early if it is broken
+    export PATH="${ENV_PREFIX}/bin:${PATH}"
+    if ! "${ENV_PY}" -c "import torch, boltz" 2>/dev/null; then
+        echo "The envguide env at ${ENV_PREFIX} is missing torch/boltz; rerun: bash delta/setup_env.sh" >&2
+        exit 2
+    fi
 }
 
 check_config() {

@@ -9,7 +9,7 @@
 set -uo pipefail
 REPO="${SLURM_SUBMIT_DIR}"
 source "${REPO}/delta/config.sh"
-activate_env
+use_env
 cd "${REPO}" || exit 1
 
 EMD=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "${TARGET_LIST}" | tr -d '[:space:]')
@@ -17,4 +17,4 @@ EMD=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "${TARGET_LIST}" | tr -d '[:space:]')
 ENVGUIDE_GPU="$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1)"
 export ENVGUIDE_GPU
 echo "${EMD} on $(hostname), ${ENVGUIDE_GPU}"
-python delta/run_map.py "${EMD}" --samples "${SAMPLES}" --steps "${STEPS}" --scale "${SCALE}"
+"${ENV_PY}" delta/run_map.py "${EMD}" --samples "${SAMPLES}" --steps "${STEPS}" --scale "${SCALE}"

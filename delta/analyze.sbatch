@@ -12,9 +12,9 @@
 set -eo pipefail
 REPO="${SLURM_SUBMIT_DIR}"
 source "${REPO}/delta/config.sh"
-activate_env
+use_env
 cd "${REPO}"
-python envguide/score.py
-python envguide/figures.py || echo "figures.py failed (scores are still saved)"
-python pilot_analysis.py --work "${REPO}" --jobs 16
+"${ENV_PY}" envguide/score.py
+"${ENV_PY}" envguide/figures.py || echo "figures.py failed (scores are still saved)"
+"${ENV_PY}" pilot_analysis.py --work "${REPO}" --jobs 16
 echo "scores: envguide/scores.csv   figures: envguide/figures/   analysis: analysis/"

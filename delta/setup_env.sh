@@ -19,9 +19,8 @@ mkdir -p "$(dirname "${ENV_PREFIX}")" "${CONDA_PKGS_DIRS}"
 if [ ! -x "${ENV_PREFIX}/bin/python" ]; then
     _with_nounset_off conda create -y --prefix "${ENV_PREFIX}" python=3.11
 fi
-activate_env
-pip install -q "boltz==2.2.1" gemmi mrcfile matplotlib pandas pyyaml
-python -c "import boltz, torch; print('boltz ok, torch', torch.__version__)"
+"${ENV_PY}" -m pip install -q "boltz==2.2.1" gemmi mrcfile matplotlib pandas pyyaml
+"${ENV_PY}" -c "import boltz, torch, sys; print('boltz ok, torch', torch.__version__, 'in', sys.prefix)"
 
 # 3. US-align (scoring)
 mkdir -p "${REPO}/external"
@@ -32,7 +31,7 @@ if [ ! -x "${REPO}/external/USalign/USalign" ]; then
 fi
 
 # 4. Boltz-2 weights + CCD into BOLTZ_CACHE (once; compute jobs then run offline for this part)
-python - <<'EOF'
+"${ENV_PY}" - <<'EOF'
 import os
 from pathlib import Path
 from boltz.main import download_boltz2
