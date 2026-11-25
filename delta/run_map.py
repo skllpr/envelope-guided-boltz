@@ -25,7 +25,7 @@ def run_boltz(emd, args, log):
     with open(log, "w") as f:
         subprocess.run([sys.executable, os.path.join(ROOT, "envguide", "run_boltz.py"), emd, "--accelerator", "gpu",
                         "--seed", "0", *args], cwd=ROOT, stdout=f, stderr=subprocess.STDOUT)
-    return open(log).read()
+    return open(log, errors="replace").read()
 
 
 def is_oom(text):
