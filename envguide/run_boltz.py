@@ -142,7 +142,7 @@ MSA_DIR = os.path.join(HERE, "msa")
 # Mount with: hdiutil attach external/boltzcache.sparsebundle
 BOLTZ_CACHE = os.environ.get("BOLTZ_CACHE", "/Volumes/boltzcache")  # override on Colab/Linux
 # Boltz outputs live there too: on FAT32 macOS adds ._*.json sidecars that Boltz tries to parse as records.
-RUNS = os.path.join(BOLTZ_CACHE, "envguide_runs")
+RUNS = os.environ.get("ENVGUIDE_RUNS") or os.path.join(BOLTZ_CACHE, "envguide_runs")  # ENVGUIDE_RUNS: other run folder
 
 
 def msa_input(emd):

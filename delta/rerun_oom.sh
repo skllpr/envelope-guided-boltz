@@ -9,7 +9,7 @@ source "${REPO}/delta/config.sh"
 check_config
 cd "${REPO}"
 mkdir -p logs
-STATUS="${BOLTZ_CACHE}/envguide_runs/status"
+STATUS="${ENVGUIDE_RUNS:-${BOLTZ_CACHE}/envguide_runs}/status"
 python3 - "${STATUS}" <<'EOF'
 import glob, json, os, sys
 oom, failed, ok, missing = [], [], [], []

@@ -15,14 +15,10 @@ N=$(grep -c . "${LIST}")
 TIME="06:00:00"
 if [ "${TEST:-0}" = "1" ]; then
     N=1; export SAMPLES=1 STEPS=20; TIME="00:45:00"
-    # separate run folder (weights linked in), so the short test is not taken as a finished run later
-    TEST_CACHE="${ENVGUIDE_DATA}/boltz_cache_test"
-    rm -rf "${TEST_CACHE}"; mkdir -p "${TEST_CACHE}"
-    for f in "${BOLTZ_CACHE}"/*; do
-        [ "$(basename "${f}")" = "envguide_runs" ] || ln -s "${f}" "${TEST_CACHE}/"
-    done
-    export BOLTZ_CACHE="${TEST_CACHE}"
-    echo "TEST run: $(head -1 "${LIST}") only, 1 sample, 20 steps -> ${TEST_CACHE}/envguide_runs"
+    # separate run folder (same weights), so the short test is not taken as a finished run later
+    export ENVGUIDE_RUNS="${ENVGUIDE_DATA}/test_runs"
+    rm -rf "${ENVGUIDE_RUNS}"; mkdir -p "${ENVGUIDE_RUNS}"
+    echo "TEST run: $(head -1 "${LIST}") only, 1 sample, 20 steps -> ${ENVGUIDE_RUNS}"
 fi
 
 # Split by size: maps over H200_MIN_TOKENS residues would run out of memory on a 48 GB A40, so they go straight

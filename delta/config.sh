@@ -66,7 +66,7 @@ activate_env() {
 }
 
 check_config() {
-    if [ "${DELTA_PROJECT}" = "CHANGE_ME" ]; then
+    if [ -z "${DELTA_PROJECT}" ] || [ "${DELTA_PROJECT}" = "CHANGE""_ME" ]; then
         echo "Set DELTA_PROJECT in delta/config.sh first (run 'accounts' on Delta to see it)." >&2
         exit 1
     fi

@@ -11,7 +11,7 @@ import argparse, glob, json, os, random, shutil, socket, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
-RUNS = os.path.join(os.environ["BOLTZ_CACHE"], "envguide_runs")  # same as run_boltz.RUNS
+RUNS = os.environ.get("ENVGUIDE_RUNS") or os.path.join(os.environ["BOLTZ_CACHE"], "envguide_runs")  # = run_boltz.RUNS
 MODES = ["unguided", "guided"]
 OOM = "FAILED (out of GPU memory)"
 

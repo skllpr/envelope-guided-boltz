@@ -58,7 +58,7 @@ def main():
     a = ap.parse_args()
     sys.path.insert(0, os.path.join(a.work, "envguide"))
 
-    runs = a.runs or os.path.join(os.environ["BOLTZ_CACHE"], "envguide_runs")
+    runs = a.runs or os.environ.get("ENVGUIDE_RUNS") or os.path.join(os.environ["BOLTZ_CACHE"], "envguide_runs")
     us = os.path.join(a.work, "external", "USalign", "USalign")
     out_root = os.path.join(a.work, "analysis")
     os.makedirs(out_root, exist_ok=True)
