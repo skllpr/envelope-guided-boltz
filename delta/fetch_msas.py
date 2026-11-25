@@ -41,6 +41,7 @@ def main():
             continue
         print(f"[{k + 1}/{len(emds)}] {emd}: {len(seqs)} entities", flush=True)
         for attempt in range(4):
+            [shutil.rmtree(t, ignore_errors=True) for t in glob.glob(os.path.join(MSA_DIR, f"{emd}_*_tmp"))]  # drop a bad cached download
             try:
                 compute_msa(data={f"{emd}_{i}": s for i, s in enumerate(seqs)}, target_id=emd,
                             msa_dir=Path(MSA_DIR), msa_server_url=a.server, msa_pairing_strategy="greedy")
