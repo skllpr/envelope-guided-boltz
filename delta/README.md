@@ -11,7 +11,7 @@ accounts                      # shows <project>-delta-gpu / <project>-delta-cpu
 mkdir -p /work/hdd/<project>/$USER && cd /work/hdd/<project>/$USER
 git clone -b delta-slurm https://github.com/skllpr/envelope-guided-boltz.git && cd envelope-guided-boltz
 nano delta/config.sh          # set DELTA_PROJECT
-bash delta/setup_env.sh       # Miniforge + Boltz-2 2.2.1 + US-align + weights (~15-30 min)
+bash delta/setup_env.sh       # conda env (Delta's miniforge3-python) + Boltz-2 2.2.1 + US-align + weights (~15-30 min)
 ```
 
 ## 2. Pick the benchmark maps and fetch MSAs (login node, no allocation)
@@ -49,7 +49,8 @@ Rerunning `submit.sh` or `rerun_oom.sh` is safe: finished modes of each map are 
 Following Delta's data-management guide: job I/O on `/work/hdd`, software on `/projects`, nothing in `$HOME`.
 - `/work/hdd/<project>/<user>/envelope-guided-boltz/`: this repo (jobs write scores, figures, logs, unzipped maps into it)
 - `/work/hdd/<project>/<user>/envguide/boltz_cache/`: Boltz weights and every run
-- `/projects/<project>/<user>/miniforge3/`: the conda install and the `envguide` environment
+- `/projects/<project>/<user>/conda/`: the `envguide` environment and conda's package cache (conda itself is
+  Delta's `miniforge3-python` module)
 
 - `.../envguide/boltz_cache/envguide_runs/<mode>/<EMD>/`: Boltz outputs and logs (as on Modal)
 - `.../envguide/boltz_cache/envguide_runs/status/<EMD>.json`: per-map status, GPU and run time
